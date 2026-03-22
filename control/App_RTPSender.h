@@ -20,18 +20,18 @@ typedef struct
 } GstRTPDataFrameInfo_T;
 
 typedef struct {
-	string      host;
-	int         port;
-	int         width;
-	int         height;
-	int         framerate;
-	int         bitrate;	// kbps
-	int         codec;		// 0=h264, 1=h265
-	int         source;		// SourceType_E
-	string      device;		// v4l2 device path
-	GstElement* pipeline;
-	GstBus*     bus;
-	bool        active;
+	string       host;
+	int          port;
+	int          width;
+	int          height;
+	int          framerate;
+	int          bitrate;	// kbps
+	CodecType_E  codec;
+	SourceType_E source;
+	string       device;	// v4l2 device path
+	GstElement*  pipeline;
+	GstBus*      bus;
+	bool         active;
 } RtpStreamInfo_T;
 
 class AppRTPSender : public AppThread

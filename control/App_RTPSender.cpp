@@ -20,7 +20,7 @@ AppRTPSender::AppRTPSender()
 	m_stream.height    = DEFAULT_HEIGHT;
 	m_stream.framerate = DEFAULT_FPS;
 	m_stream.bitrate   = DEFAULT_BITRATE;
-	m_stream.codec     = 0;
+	m_stream.codec     = CODEC_H264;
 	m_stream.source    = SOURCE_TEST;
 	m_stream.device    = DEFAULT_DEVICE;
 	m_stream.pipeline  = NULL;
@@ -54,7 +54,7 @@ void AppRTPSender::setConfig(const AppConfig_T& cfg)
 	m_stream.framerate = cfg.fps;
 	m_stream.bitrate   = cfg.bitrate;
 	m_stream.codec     = cfg.codec;
-	m_stream.source    = (int)cfg.source;
+	m_stream.source    = cfg.source;
 	m_stream.device    = std::string(cfg.device);
 }
 
@@ -114,7 +114,7 @@ std::string AppRTPSender::buildPipeline()
 {
 	std::string src = buildSourceBin();
 	char buf[512];
-	if (m_stream.codec == 1) {	// H.265
+	if (m_stream.codec == CODEC_H265) {
 		std::snprintf(buf, sizeof(buf),
 			"%s ! videoconvert ! "
 			"x265enc tune=zerolatency bitrate=%d ! "
@@ -122,7 +122,7 @@ std::string AppRTPSender::buildPipeline()
 			"udpsink host=%s port=%d sync=false",
 			src.c_str(), m_stream.bitrate,
 			m_stream.host.c_str(), m_stream.port);
-	} else {					// H.264 (default)
+	} else {	// H.264 (default)
 		std::snprintf(buf, sizeof(buf),
 			"%s ! videoconvert ! "
 			"x264enc tune=zerolatency bitrate=%d ! "
@@ -171,7 +171,7 @@ bool AppRTPSender::StartStream()
 	printf("AppRTPSender: stream started -> rtp://%s:%d (%dx%d %dfps %dkbps %s %s)\n",
 		   m_stream.host.c_str(), m_stream.port,
 		   m_stream.width, m_stream.height, m_stream.framerate, m_stream.bitrate,
-		   (m_stream.codec == 1) ? "h265" : "h264",
+		   (m_stream.codec == CODEC_H265) ? "h265" : "h264",
 		   (m_stream.source == SOURCE_V4L2) ? m_stream.device.c_str() : "testsrc");
 	return true;
 }

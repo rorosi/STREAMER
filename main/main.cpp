@@ -42,21 +42,22 @@ static void printUsage(const char* prog)
 	printf("  -m, --mode        <rtsp|rtp>       Streaming mode        (default: rtsp)\n");
 	printf("  -c, --codec       <h264|h265>       Codec format          (default: h264)\n");
 	printf("  -f, --fps         <FPS>             Framerate 1-120       (default: %d)\n",   DEFAULT_FPS);
+	printf("  -s, --source      <test|v4l2>       Video source          (default: test)\n");
+	printf("  -d, --device      <PATH>            V4L2 device path      (default: %s)\n",   DEFAULT_DEVICE);
 	printf("  -h, --help                          Show this help\n\n");
 	printf("RTP mode:\n");
 	printf("  -H, --host        <IP>              Destination IP        (default: %s)\n",   DEFAULT_RTP_HOST);
 	printf("  -p, --port        <PORT>            Destination port      (default: %d)\n",   DEFAULT_RTP_PORT);
 	printf("  -w, --width       <W>               Frame width           (default: %d)\n",   DEFAULT_WIDTH);
 	printf("  -e, --height      <H>               Frame height          (default: %d)\n",   DEFAULT_HEIGHT);
-	printf("  -b, --bitrate     <KBPS>            Bitrate kbps          (default: %d)\n",   DEFAULT_BITRATE);
-	printf("  -s, --source      <test|v4l2>       Video source          (default: test)\n");
-	printf("  -d, --device      <PATH>            V4L2 device path      (default: %s)\n\n", DEFAULT_DEVICE);
+	printf("  -b, --bitrate     <KBPS>            Bitrate kbps          (default: %d)\n\n", DEFAULT_BITRATE);
 	printf("RTSP mode:\n");
 	printf("      --rtsp-host   <IP>              Server bind address   (default: %s)\n",   DEFAULT_RTSP_HOST);
 	printf("      --rtsp-port   <PORT>            Server port           (default: %d)\n\n", DEFAULT_RTSP_PORT);
 	printf("Examples:\n");
 	printf("  %s --mode rtsp\n", prog);
-	printf("  %s --mode rtsp --rtsp-host 0.0.0.0 --rtsp-port 8554 --codec h265\n", prog);
+	printf("  %s --mode rtsp --rtsp-host 0.0.0.0 --codec h265\n", prog);
+	printf("  %s --mode rtsp --source v4l2 --device /dev/video0\n", prog);
 	printf("  %s --mode rtp --host 192.168.1.100 --port 5000 --codec h265\n", prog);
 	printf("  %s --mode rtp --source v4l2 --device /dev/video0 --width 1920 --height 1080\n\n", prog);
 }
@@ -72,7 +73,7 @@ static AppConfig_T parseArgs(int argc, char* argv[])
 	cfg.height    = DEFAULT_HEIGHT;
 	cfg.fps       = DEFAULT_FPS;
 	cfg.bitrate   = DEFAULT_BITRATE;
-	cfg.codec     = 0;
+	cfg.codec     = CODEC_H264;
 	cfg.rtsp_port = DEFAULT_RTSP_PORT;
 	strncpy(cfg.host,      DEFAULT_RTP_HOST,  sizeof(cfg.host) - 1);
 	strncpy(cfg.device,    DEFAULT_DEVICE,    sizeof(cfg.device) - 1);
@@ -135,7 +136,7 @@ static AppConfig_T parseArgs(int argc, char* argv[])
 				cfg.bitrate = v;
 				break;
 			}
-			case 'c': cfg.codec  = (strcasecmp(optarg, "h265") == 0) ? 1 : 0; break;
+			case 'c': cfg.codec  = (strcasecmp(optarg, "h265") == 0) ? CODEC_H265 : CODEC_H264; break;
 			case 's': cfg.source = (strcasecmp(optarg, "v4l2") == 0) ? SOURCE_V4L2 : SOURCE_TEST; break;
 			case 'd': strncpy(cfg.device, optarg, sizeof(cfg.device) - 1); break;
 			case  1 : strncpy(cfg.rtsp_host, optarg, sizeof(cfg.rtsp_host) - 1); break;

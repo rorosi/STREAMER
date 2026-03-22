@@ -1,18 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <getopt.h>
-#include <sys/ioctl.h>
-#include <string>
-#include <sys/mount.h>
-#include <signal.h>
-#include <mtd/mtd-user.h>
-#include <sys/sysinfo.h>
 
 #include "include/App_Define.h"
 #include "base/App_Command.h"
@@ -36,7 +25,7 @@ AppGSTManager::AppGSTManager()
 	m_config.height    = DEFAULT_HEIGHT;
 	m_config.fps       = DEFAULT_FPS;
 	m_config.bitrate   = DEFAULT_BITRATE;
-	m_config.codec     = 0;
+	m_config.codec     = CODEC_H264;
 	m_config.rtsp_port = DEFAULT_RTSP_PORT;
 	strncpy(m_config.host,      DEFAULT_RTP_HOST,  sizeof(m_config.host) - 1);
 	strncpy(m_config.device,    DEFAULT_DEVICE,    sizeof(m_config.device) - 1);

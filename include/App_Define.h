@@ -1,16 +1,6 @@
 #ifndef _APP_DEFINE_H__
 #define _APP_DEFINE_H__
 
-// Main Task
-const int M_MODULE_1CH		= 1001;
-const int M_MODULE_2CH 		= 1002;
-const int M_MODULE_3CH		= 1003;
-const int M_MODULE_ALL 	    = 1004;
-
-
-// UART Task
-#define KEY_MQ_UART_TASK		0x20000001
-
 // RTP Sender Task
 #define KEY_MQ_RTP_TASK			0x20000002
 
@@ -42,6 +32,12 @@ typedef enum {
 	SOURCE_V4L2,		// v4l2src (실제 카메라)
 } SourceType_E;
 
+// Codec type
+typedef enum {
+	CODEC_H264 = 0,
+	CODEC_H265,
+} CodecType_E;
+
 // CLI argument config
 typedef struct {
 	StreamMode_E mode;
@@ -53,7 +49,7 @@ typedef struct {
 	int          height;
 	int          fps;
 	int          bitrate;		// kbps
-	int          codec;			// 0=h264, 1=h265
+	CodecType_E  codec;
 	char         rtsp_host[64];	// [rtsp] 서버 바인드 주소
 	int          rtsp_port;		// [rtsp] 서버 포트
 } AppConfig_T;

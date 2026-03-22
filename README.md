@@ -26,10 +26,17 @@ sudo apt install \
 ## 빌드
 
 ```bash
+# x86 (기본)
 make
+
+# aarch64 크로스컴파일
+make ARCH=aarch64
+
+# sysroot 직접 지정
+make ARCH=aarch64 SYSROOT=/opt/ti/sdk/sysroots/aarch64-linux
 ```
 
-빌드 결과물은 `bin/stream_daemon`에 생성된다.
+빌드 결과물은 `bin/<ARCH>/stream_daemon`에 생성된다.
 
 ```bash
 make clean   # 빌드 산출물 제거
@@ -44,6 +51,8 @@ Common:
   -m, --mode        <rtsp|rtp>       스트리밍 모드        (기본: rtsp)
   -c, --codec       <h264|h265>      코덱                 (기본: h264)
   -f, --fps         <FPS>            프레임레이트 1-120   (기본: 30)
+  -s, --source      <test|v4l2>      영상 소스            (기본: test)
+  -d, --device      <PATH>           V4L2 장치 경로       (기본: /dev/video0)
   -h, --help                         도움말
 
 RTP mode:
@@ -52,8 +61,6 @@ RTP mode:
   -w, --width       <W>              가로 해상도          (기본: 1280)
   -e, --height      <H>              세로 해상도          (기본: 720)
   -b, --bitrate     <KBPS>           비트레이트 kbps      (기본: 2000)
-  -s, --source      <test|v4l2>      영상 소스            (기본: test)
-  -d, --device      <PATH>           V4L2 장치 경로       (기본: /dev/video0)
 
 RTSP mode:
       --rtsp-host   <IP>             서버 바인드 주소     (기본: 127.0.0.1)
@@ -66,10 +73,13 @@ RTSP mode:
 
 ```bash
 # 기본 실행 (h264, 30fps, rtsp://127.0.0.1:8554)
-./bin/stream_daemon --mode rtsp
+./bin/x86/stream_daemon --mode rtsp
 
 # 외부 접근 허용 + H.265
-./bin/stream_daemon --mode rtsp --rtsp-host 0.0.0.0 --rtsp-port 8554 --codec h265
+./bin/x86/stream_daemon --mode rtsp --rtsp-host 0.0.0.0 --codec h265
+
+# V4L2 카메라 소스
+./bin/x86/stream_daemon --mode rtsp --source v4l2 --device /dev/video0
 ```
 
 수신 확인:
@@ -83,10 +93,10 @@ gst-launch-1.0 rtspsrc location=rtsp://127.0.0.1:8554/cam1 ! decodebin ! videoco
 
 ```bash
 # videotestsrc → 127.0.0.1:5000
-./bin/stream_daemon --mode rtp
+./bin/x86/stream_daemon --mode rtp
 
 # V4L2 카메라 → 원격 수신자
-./bin/stream_daemon --mode rtp --source v4l2 --device /dev/video0 \
+./bin/x86/stream_daemon --mode rtp --source v4l2 --device /dev/video0 \
   --host 192.168.1.100 --port 5000 --width 1920 --height 1080 --codec h265 --bitrate 4000
 ```
 
@@ -121,12 +131,16 @@ streamer/
 │   └── App_RTPSender       # RTP 송신 (udpsink)
 ├── main/
 │   └── main.cpp            # 진입점, CLI 파싱
-├── Rules.make
+├── Rules.make              # 공용 빌드 변수 (크로스컴파일 설정)
 └── Makefile
 ```
 
 ## V4L2 카메라 연결
 
 현재는 `videotestsrc`(테스트 패턴)를 기본 소스로 사용한다.
-실제 카메라 연결 시 `--source v4l2 --device /dev/video0` 옵션을 사용하거나,
-`control/App_RTPSender.cpp`의 `buildSourceBin()` 한 곳만 수정하면 소스를 교체할 수 있다.
+실제 카메라 연결 시 `--source v4l2 --device /dev/video0` 옵션을 사용하면 되며,
+RTSP 모드와 RTP 모드 모두 지원한다.
+
+소스 교체 포인트:
+- RTP: `control/App_RTPSender.cpp` — `buildSourceBin()`
+- RTSP: `control/App_GST.cpp` — `make_source_bin()`

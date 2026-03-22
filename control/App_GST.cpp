@@ -8,18 +8,24 @@ AppGST::AppGST()
 {
     strncpy(m_rtspHost, DEFAULT_RTSP_HOST, sizeof(m_rtspHost) - 1);
     m_rtspHost[sizeof(m_rtspHost) - 1] = '\0';
+    strncpy(m_device, DEFAULT_DEVICE, sizeof(m_device) - 1);
+    m_device[sizeof(m_device) - 1] = '\0';
     m_rtspPort = DEFAULT_RTSP_PORT;
     m_fps      = DEFAULT_FPS;
-    m_codec    = 0;
+    m_codec    = CODEC_H264;
+    m_source   = SOURCE_TEST;
 }
 
 void AppGST::setConfig(const AppConfig_T& cfg)
 {
     strncpy(m_rtspHost, cfg.rtsp_host, sizeof(m_rtspHost) - 1);
     m_rtspHost[sizeof(m_rtspHost) - 1] = '\0';
+    strncpy(m_device, cfg.device, sizeof(m_device) - 1);
+    m_device[sizeof(m_device) - 1] = '\0';
     m_rtspPort = cfg.rtsp_port;
     m_fps      = cfg.fps;
     m_codec    = cfg.codec;
+    m_source   = cfg.source;
 }
 AppGST::~AppGST() {
     if (m_rtspServer) {
@@ -79,32 +85,48 @@ static const Stream kStreams[] = {
 };
 }
 
+// Build source bin string
+static std::string make_source_bin(SourceType_E source, const char* device, int width, int height, int fps) {
+    char buf[256];
+    if (source == SOURCE_V4L2) {
+        std::snprintf(buf, sizeof(buf),
+            "v4l2src device=%s ! "
+            "video/x-raw,format=NV12,width=%d,height=%d,framerate=%d/1",
+            device, width, height, fps);
+    } else {
+        std::snprintf(buf, sizeof(buf),
+            "videotestsrc is-live=true pattern=smpte ! "
+            "video/x-raw,format=NV12,width=%d,height=%d,framerate=%d/1",
+            width, height, fps);
+    }
+    return std::string(buf);
+}
+
 // Build RTSP launch pipeline for a given resolution, payload, fps and codec
-static std::string make_rtsp_pipeline(int width, int height, int pt, int fps, int codec) {
+static std::string make_rtsp_pipeline(int width, int height, int pt, int fps, CodecType_E codec,
+                                      SourceType_E source, const char* device) {
+    std::string src = make_source_bin(source, device, width, height, fps);
     char buf[512];
-    if (codec == 1) {	// H.265
+    if (codec == CODEC_H265) {
         std::snprintf(buf, sizeof(buf),
-            "( videotestsrc is-live=true pattern=smpte ! "
-            "video/x-raw,format=NV12,width=%d,height=%d,framerate=%d/1 ! "
-            "videoconvert ! x265enc tune=zerolatency ! "
+            "( %s ! videoconvert ! x265enc tune=zerolatency ! "
             "h265parse ! rtph265pay pt=%d name=pay0 config-interval=1 )",
-            width, height, fps, pt);
-    } else {			// H.264 (default)
+            src.c_str(), pt);
+    } else {
         std::snprintf(buf, sizeof(buf),
-            "( videotestsrc is-live=true pattern=smpte ! "
-            "video/x-raw,format=NV12,width=%d,height=%d,framerate=%d/1 ! "
-            "videoconvert ! x264enc tune=zerolatency ! "
+            "( %s ! videoconvert ! x264enc tune=zerolatency ! "
             "h264parse ! rtph264pay pt=%d name=pay0 config-interval=1 )",
-            width, height, fps, pt);
+            src.c_str(), pt);
     }
     return std::string(buf);
 }
 
 // mounts에 path 추가
-static void add_stream(GstRTSPServer* server, const Stream& s, int fps, int codec) {
+static void add_stream(GstRTSPServer* server, const Stream& s, int fps, CodecType_E codec,
+                       SourceType_E source, const char* device) {
     GstRTSPMountPoints* mounts = gst_rtsp_server_get_mount_points(server);
     GstRTSPMediaFactory* factory = gst_rtsp_media_factory_new();
-    std::string launch = make_rtsp_pipeline(s.w, s.h, s.pt, fps, codec);
+    std::string launch = make_rtsp_pipeline(s.w, s.h, s.pt, fps, codec, source, device);
     gst_rtsp_media_factory_set_launch(factory, launch.c_str());
     gst_rtsp_media_factory_set_shared(factory, TRUE);
 #ifdef GST_RTSP_SUSPEND_MODE_RESET
@@ -122,17 +144,19 @@ static void remove_stream(GstRTSPServer* server, const char* path) {
 }
 
 // 지정 index만 활성, 나머지는 비활성
-static void enable_only(GstRTSPServer* server, int idx, int fps, int codec) {
+static void enable_only(GstRTSPServer* server, int idx, int fps, CodecType_E codec,
+                        SourceType_E source, const char* device) {
     const int N = (int)(sizeof(kStreams)/sizeof(kStreams[0]));
     for (int i = 0; i < N; ++i) {
-        if (i == idx) add_stream(server, kStreams[i], fps, codec);
+        if (i == idx) add_stream(server, kStreams[i], fps, codec, source, device);
         else          remove_stream(server, kStreams[i].path);
     }
 }
 
 // 모두 활성
-static void enable_all(GstRTSPServer* server, int fps, int codec) {
-    for (const auto& s : kStreams) add_stream(server, s, fps, codec);
+static void enable_all(GstRTSPServer* server, int fps, CodecType_E codec,
+                       SourceType_E source, const char* device) {
+    for (const auto& s : kStreams) add_stream(server, s, fps, codec, source, device);
 }
 
 void AppGST::StartRTSPServer() {
@@ -143,59 +167,25 @@ void AppGST::StartRTSPServer() {
     gst_rtsp_server_set_address(m_rtspServer, m_rtspHost);
     gst_rtsp_server_set_service(m_rtspServer, portStr);
 
-    enable_all(m_rtspServer, m_fps, m_codec);
+    enable_all(m_rtspServer, m_fps, m_codec, m_source, m_device);
 
     gst_rtsp_server_attach(m_rtspServer, nullptr);
-    g_print("RTSP Server Running on rtsp://%s:%d (%s)\n",
-            m_rtspHost, m_rtspPort, (m_codec == 1) ? "h265" : "h264");
+    g_print("RTSP Server Running on rtsp://%s:%d (%s, %s)\n",
+            m_rtspHost, m_rtspPort,
+            (m_codec == CODEC_H265) ? "h265" : "h264",
+            (m_source == SOURCE_V4L2) ? m_device : "testsrc");
     g_print("Available paths: /cam1 /cam2 /cam3\n");
 }
 
-// Main loop entry: start RTSP server and react to commands
 void AppGST::mainLoop() {
-    AppMsgQueue 		qModuleMain(KEY_MQ_UART_TASK);
-    AppCommand		cmd;
-
     GstInit();
-	
-    StartRTSPServer();  // RTSP 서버 시작
+    StartRTSPServer();
 
-    GMainContext *ctx = g_main_context_default();
-    // GLib 이벤트가 있으면 한 번 처리
-    while (g_main_context_pending(ctx))
-        g_main_context_iteration(ctx, FALSE);
-
+    // GLib 메인 루프 실행 — isRunning() 감시하며 종료 시 quit
+    GMainContext* ctx = g_main_context_default();
     while (isRunning()) {
-        while (qModuleMain.peek(1)==true)
-		{
-			if (qModuleMain.read(1, &cmd)==true)
-			{
-                switch (cmd.getId())
-				{
-					case M_MODULE_1CH:
-                        printf("M_MODULE_1CH -> enable /cam1 only\n");
-                        enable_only(m_rtspServer, 0, m_fps, m_codec);
-						break;
-					case M_MODULE_2CH:
-                        printf("M_MODULE_2CH -> enable /cam2 only\n");
-                        enable_only(m_rtspServer, 1, m_fps, m_codec);
-						break;
-					case M_MODULE_3CH:
-                        printf("M_MODULE_3CH -> enable /cam3 only\n");
-                        enable_only(m_rtspServer, 2, m_fps, m_codec);
-						break;
-                    case M_MODULE_ALL:
-                        printf("M_MODULE_ALL -> enable all\n");
-                        enable_all(m_rtspServer, m_fps, m_codec);
-						break;
-					default:
-						break;
-				}
-            }
-        }
-        // 주기적으로 GLib 이벤트 처리
         g_main_context_iteration(ctx, FALSE);
-        usleep(10000);
+        usleep(1000);
     }
 
     GstExit();

@@ -2,18 +2,9 @@
 #define _APP_GST_H_
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <sys/poll.h>
-#include <sys/time.h>
-#include <time.h>
-#include <semaphore.h>
 
 #include <gst/gst.h>
-#include <gst/app/gstappsrc.h> 
-#include <gst/app/gstappsink.h>
 #include <gst/rtsp-server/rtsp-server.h>
 
 #include "base/App_Thread.h"
@@ -50,8 +41,6 @@ private:
 
 public:
 	GstFBDataFrameInfo_T	m_pGstFBDataFrameInfo;
-	int		m_nFrameWidth;
-	int		m_nFrameHeight;
 
 private:
     static AppGST 	*m_pInstance;
@@ -59,10 +48,9 @@ private:
     char             m_rtspHost[64];
     int              m_rtspPort;
     int              m_fps;
-    int              m_codec;		// 0=h264, 1=h265
-
-private:
-    struct ev_loop *m_EvLoop_XavierManager;
+    CodecType_E      m_codec;
+    SourceType_E     m_source;
+    char             m_device[64];
 };
 
 inline AppGST* AppGST::instance()
