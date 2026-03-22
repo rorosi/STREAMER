@@ -6,20 +6,29 @@ SUBS = base \
 	control \
 	main
 
-BINDIR = bin
+all: outdir
+	@(for c in $(SUBS); do \
+		echo ""; \
+		echo "********************* $$c *********************"; \
+		$(MAKE) -C $$c || exit 1; \
+	done)
+	@echo ""
+	@echo "Build complete: $(BIN_DIR)/stream_daemon  [ARCH=$(ARCH)]"
 
-all : $(BINDIR)
-	@(for c in $(SUBS); do  echo ""; echo "********************* $$c *********************"; \
-	($(MAKE) -C $$c || grep -r "error" && exit 0); done); 
+outdir:
+	@mkdir -p $(LIB_DIR)
+	@mkdir -p $(BIN_DIR)
 
-clean ::
-	@(for c in $(SUBS); do echo ""; echo "********************* $$c *********************"; (cd $$c; $(MAKE) clean) done)
-	
-dep :
-	@(for c in $(SUBS); do echo ""; echo "********************* $$c *********************"; (cd $$c; $(MAKE) dep) done)
-	@echo done
-	
-$(BINDIR) :
-	@(if [ ! -d ./$(BINDIR) ]; then \
-		mkdir $(BINDIR); \
-	fi;)
+clean:
+	@(for c in $(SUBS); do \
+		echo ""; \
+		echo "********************* $$c *********************"; \
+		$(MAKE) -C $$c clean; \
+	done)
+
+dep:
+	@(for c in $(SUBS); do \
+		echo ""; \
+		echo "********************* $$c *********************"; \
+		$(MAKE) -C $$c dep; \
+	done)
