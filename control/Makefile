@@ -1,7 +1,7 @@
 sinclude ../Rules.make
 
-OBJS = 	App_GSTManager.o \
-		App_GST.o \
+OBJS = 	App_StreamManager.o \
+		App_RTSPServer.o \
 		App_RTPSender.o
 
 	

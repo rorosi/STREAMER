@@ -26,7 +26,7 @@
 
 #include "App_Define.h"
 #include "include/version.h"
-#include "control/App_GSTManager.h"
+#include "control/App_StreamManager.h"
 
 using namespace std;
 
@@ -262,17 +262,17 @@ int main(int argc, char **argv)
 
 	g_iRunning = 1;
 
-	AppGSTManager::instance()->setConfig(cfg);
-	AppGSTManager::instance()->start();
+	AppStreamManager::instance()->setConfig(cfg);
+	AppStreamManager::instance()->start();
 
 	while(g_iRunning){
 		usleep(10000);
 	};
 
 	// For APPGSTMnager End
-	AppGSTManager::instance()->stop();
-	AppGSTManager::instance()->join();    
-	AppGSTManager::instance()->release();
+	AppStreamManager::instance()->stop();
+	AppStreamManager::instance()->join();    
+	AppStreamManager::instance()->release();
 	// --
 
 	printf( "\n+--------------------------------------------+ \n");
