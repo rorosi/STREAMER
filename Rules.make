@@ -1,7 +1,7 @@
 ####################################################
 BUILD_HOME := /home/server/
 SYSTEM := SERVER
-APP_DIR := $(BUILD_HOME)/virtual
+APP_DIR := $(BUILD_HOME)/streamer
 
 MODEL_NAME := 
 LIB_DIR	   = $(APP_DIR)/lib
